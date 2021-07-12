@@ -9,7 +9,12 @@
   },
   "dependencies": {
     "core-js": "^3.6.5",
-    "vue": "^3.0.0"
+    "node-sass": "^6.0.1",
+    "sass": "^1.35.1",
+    "sass-loader": "^10.1.0",
+    "vue": "^3.0.0",
+    "vue-router": "^4.0.10",
+    "xlsx": "^0.17.0"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "~4.5.0",
