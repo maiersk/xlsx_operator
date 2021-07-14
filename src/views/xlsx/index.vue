@@ -19,25 +19,29 @@ import XLSX from 'xlsx'
 export default {
   name: 'xlsx',
   el: '#app',
-  data: {
-    option: {
-      n: null,
-      r: null,
-      o: null,
-      fn: null,
-    },
-    content: null,
-    file_name: '',
-    disable_save: false,
+  data() {
+    return {
+      option: {
+        n: null,
+        r: null,
+        o: null,
+        fn: null,
+      },
+      content: null,
+      file_name: '',
+      disable_save: false,
+      fileRef: null
+    }
   },
   mounted() {
+    this.fileRef = this.$refs['fileRef']
     // document.getElementById('export').addEventListener('click', () => {
     //   this.exportExcel('e');
     // })
   },
   methods: {
     selectFile: function (option) {
-      $("#file").click();
+      this.fileRef.click();
       if (option) {
         this.option = option || {}
       }
@@ -95,7 +99,7 @@ export default {
       return result;
     },
     // 读取本地excel文件
-    readLocalFile: function (file, callback) {
+    readLocalFile: function (file) {
       return new Promise((resolve) => {
         var reader = new FileReader();
         reader.onload = async function (e) {
