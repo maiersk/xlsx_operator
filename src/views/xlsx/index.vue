@@ -1,24 +1,46 @@
 <template>
   <div class="xlsx">
     <input class="file_input"
-      type="file" ref="fileRef" @change="onChange(event)"
-      accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      type="file" ref="fileRef" @change="onfile($event)"
+      accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
     >
     <button @click="selectFile()">导入</button>
     <button>导出</button>
 
-    <main>
-      <div v-html="x_data"></div>
-    </main>
+    <component v-bind:is="sumLogs"></component>
+
+    <div class="show_sheet">
+      <ul>
+        <li v-for="(val, i) in sheetNames" :key="i">
+          <button class="change" @click="this.changeContent(i)" >{{val}}</button>
+        </li>
+      </ul>
+      <table>
+        <tr class="row">
+          <th v-for="(val, k) in content[0]" :key="k">
+            {{ k }}
+          </th>
+        </tr>
+        <tr v-for="(item, i) in content" :key="i">
+          <td v-for="(val, k) in item" :key="k">
+            {{ val }}
+          </td>
+        </tr>
+      </table>
+    </div>
   </div>
 </template>
 
 <script>
 import XLSX from 'xlsx'
+import sumLogs from '../sumLogs/'
 
 export default {
   name: 'xlsx',
   el: '#app',
+  components: {
+    sumLogs
+  },
   data() {
     return {
       option: {
@@ -27,7 +49,12 @@ export default {
         o: null,
         fn: null,
       },
-      content: null,
+      project_exec_list: [
+
+      ],
+      sheetNames: [],
+      sheets: [],
+      content: [],
       file_name: '',
       disable_save: false,
       fileRef: null
@@ -40,63 +67,29 @@ export default {
     // })
   },
   methods: {
-    selectFile: function (option) {
+    changeContent: function (index = 0) {
+      const worksheet = this.sheets[this.sheetNames[index]];
+      this.content = XLSX.utils.sheet_to_json(worksheet);
+    },
+    selectFile: function () {
       this.fileRef.click();
-      if (option) {
-        this.option = option || {}
-      }
     },
     onfile: async function (e) {
       const files = e.target.files; if (files.length === 0) return;
       const f = files[0];
-      let re;
-      eval("re = /" + this.option.r + "/g");
-      if (!re.test(f.name)) {
-        alert(`仅支持读取${this.option.r}格式！`);
+      let re, le;
+      eval("re = /xlsx/g; le = /xls/g;");
+      if (!re.test(f.name) && !le.test(f.name)) {
+        alert(`仅支持读取xlsx或xls格式！`);
         return;
       }
-      if (this.option.n === 'd') {
-        const reader = new FileReader();
-        const result = await new Promise((resolve, reject) => {
-          reader.readAsText(f);
-          reader.onload = function () {
-            resolve(this.result);
-          }
-          reader.onerror = function () {
-            alert(this.error);
-            reject();
-          }
-        })
-        this.content = result;
-      } else {
-        const workbook = await this.readLocalFile(f);
-        this.content = this.readWorkbook(workbook);
+      const workbook = await this.readLocalFile(f);
+      this.content = await this.readWorkbook(workbook);
 
-        this.content.forEach((item, i) => {
-          this.content[i]['成立日期'] = this.formatDate(item['成立日期'] || '', '/');
-        })
-      }
       this.file_name = f.name;
-      // console.log(this.content);
-      this.content = this.option.fn(this.content);
+      await this.changeContent();
+      console.log(this.content);
       alert('操作成功');
-      // console.log(this.content);
-      // console.log(this.encode(this.content));
-      // console.log(this.decode(this.encode(this.content)));
-    },
-    encode: function (json) {
-      let result = JSON.stringify(json);
-      result = window.btoa(unescape(encodeURIComponent(result)));
-      result = result.split('+').reverse();
-      this.disable_save = true;
-      return result.join('ku4/E76Ii');
-    },
-    decode: function (str) {
-      let result = str.split('ku4/E76Ii').reverse().join('+');
-      result = decodeURIComponent(escape(window.atob((result).replace(/-/g, '+').replace(/_/g, '/'))));
-      result = JSON.parse(result);
-      this.disable_save = true;
-      return result;
     },
     // 读取本地excel文件
     readLocalFile: function (file) {
@@ -112,10 +105,8 @@ export default {
       })
     },
     readWorkbook: function (workbook) {
-      var sheetNames = workbook.SheetNames; // 工作表名称集合
-      var worksheet = workbook.Sheets[sheetNames[0]]; // 这里我们只读取第一张sheet
-      var content = XLSX.utils.sheet_to_json(worksheet);
-      return content;
+      this.sheetNames = workbook.SheetNames; // 工作表名称集合
+      this.sheets = workbook.Sheets
     },
     openDownloadDialog: function (url, saveName) {
       if (typeof url == 'object' && url instanceof Blob) {
@@ -166,8 +157,7 @@ export default {
       var temp, blob;
 
       if (option && option === 'e') {
-        temp = this.encode(this.content);
-        blob = new Blob([temp]);
+        blob = new Blob([this.content]);
       } else {
         if (this.option.n === "d") {
             temp = this.content;
